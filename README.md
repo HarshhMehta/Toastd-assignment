@@ -12,7 +12,7 @@ A modern, responsive application that provides an Instagram Reels-like scrolling
 - Touch Support: Added specific touch event handlers for mobile devices with swipe detection
 
 ### facing issues
-- Smooth transitions
+- Smooth scrolling transitions bw reels
 
 
 ## Getting Started

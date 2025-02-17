@@ -1,17 +1,14 @@
 "use client"
-import React from 'react'
+import React from "react";
 import { useRef, useEffect, useState } from "react"
 import { Volume2, VolumeX, Heart, Play, ChevronUp, ChevronDown, Share2 } from "lucide-react"
-import { ShareButton } from "./ShareButton"
+import { ShareButton } from "./ShareButton";
 
 export function VideoReel({ reel, playStates, muteStates, setPlayStates, setMuteStates, likes, setLikes }) {
   const videoRef = useRef(null)
   const containerRef = useRef(null)
   const [isClient, setIsClient] = useState(false)
-  const [touchStart, setTouchStart] = useState(null)
-  const [touchEnd, setTouchEnd] = useState(null)
-
-  const minSwipeDistance = 50
+  const [isScrolling, setIsScrolling] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
@@ -53,43 +50,35 @@ export function VideoReel({ reel, playStates, muteStates, setPlayStates, setMute
   }, [isClient, reel.id, setPlayStates])
 
   const scrollToNextReel = (direction) => {
-    const reelHeight = containerRef.current.offsetHeight
+    if (!isClient || isScrolling) return
+
+    const reelHeight = window.innerHeight
     const currentScroll = window.scrollY
-    const targetScroll =
-      direction === "up"
-        ? Math.floor(currentScroll / reelHeight) * reelHeight
-        : Math.ceil(currentScroll / reelHeight) * reelHeight
+    const currentReelIndex = Math.round(currentScroll / reelHeight)
+    const nextReelIndex = direction === 'up' ? currentReelIndex - 1 : currentReelIndex + 1
+    const targetScroll = nextReelIndex * reelHeight
 
-    window.scrollTo({
-      top: targetScroll,
-      behavior: "smooth",
-    })
-  }
-
-  const onTouchStart = (e) => {
-    setTouchEnd(null)
-    setTouchStart(e.targetTouches[0].clientY)
-  }
-
-  const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientY)
-  }
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return
-
-    const distance = touchStart - touchEnd
-    const isSwipe = Math.abs(distance) > minSwipeDistance
-
-    if (isSwipe) {
-      if (distance > 0) {
-        // Swipe up
-        scrollToNextReel("down")
-      } else {
-        // Swipe down
-        scrollToNextReel("up")
-      }
+    if (targetScroll >= 0 && targetScroll <= document.documentElement.scrollHeight - window.innerHeight) {
+      setIsScrolling(true)
+      window.scrollTo({
+        top: targetScroll,
+        behavior: "smooth"
+      })
+      
+      setTimeout(() => {
+        setIsScrolling(false)
+      }, 800)
     }
+  }
+
+  const handleScroll = (e) => {
+    if (!isClient || isScrolling) {
+      e.preventDefault()
+      return
+    }
+
+    e.preventDefault()
+    scrollToNextReel(e.deltaY > 0 ? 'down' : 'up')
   }
 
   const togglePlayPause = () => {
@@ -135,49 +124,33 @@ export function VideoReel({ reel, playStates, muteStates, setPlayStates, setMute
     }
   }
 
-  useEffect(() => {
-    const handleWheel = (e) => {
-      e.preventDefault()
-      const direction = e.deltaY > 0 ? "down" : "up"
-      scrollToNextReel(direction)
-    }
-
-    window.addEventListener("wheel", handleWheel, { passive: false })
-
-    return () => {
-      window.removeEventListener("wheel", handleWheel)
-    }
-  }, [])
-
   if (!isClient) {
     return (
-      <div className="relative h-screen w-full snap-center">
+      <div className="relative h-screen w-full snap-start">
         <div className="h-full w-full bg-gray-900" />
       </div>
     )
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative h-screen w-full flex items-center justify-center bg-white"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
+    <div 
+      ref={containerRef} 
+      className="relative h-screen w-full snap-start flex items-center justify-center bg-white md:overflow-hidden"
+      onWheel={handleScroll}
     >
       <div className="fixed top-5 right-4 z-20">
         <button
           className="hidden relative right-170 top-20 sm:flex p-2 rounded-full bg-[#fbb13c] text-black"
-          onClick={() => scrollToNextReel("up")}
+          onClick={() => scrollToNextReel('up')}
         >
           <ChevronUp className="h-10 w-10 cursor-pointer relative" />
         </button>
       </div>
-
+      
       <div className="fixed bottom-5 right-4 z-20">
         <button
           className="hidden relative right-170 bottom-20 sm:flex p-2 rounded-full bg-[#fbb13c] text-black"
-          onClick={() => scrollToNextReel("down")}
+          onClick={() => scrollToNextReel('down')}
         >
           <ChevronDown className="h-10 w-10 cursor-pointer relative" />
         </button>
@@ -254,4 +227,3 @@ export function VideoReel({ reel, playStates, muteStates, setPlayStates, setMute
     </div>
   )
 }
-
